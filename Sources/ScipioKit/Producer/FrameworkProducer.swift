@@ -80,7 +80,42 @@ struct FrameworkProducer {
     }
 
     private func overriddenBuildOption(for buildProduct: BuildProduct) -> BuildOptions {
-        buildOptionsMatrix[buildProduct.target.name] ?? baseBuildOptions
+        let buildOptions = overriddenBaseBuildOptions(for: buildProduct)
+        return buildOptionsMatrix[buildProduct.target.name] ?? buildOptions
+    }
+
+    private func overriddenBaseBuildOptions(for buildProduct: BuildProduct) -> BuildOptions {
+        let dependencies = (try? buildProduct.target.recursiveDependencies()) ?? []
+
+        guard baseBuildOptions.frameworkType == .dynamic, !dependencies.isEmpty else {
+            return baseBuildOptions
+        }
+
+        var extraBuildParameters = baseBuildOptions.extraBuildParameters ?? [:]
+        baseBuildOptions.sdks.forEach { sdk in
+            extraBuildParameters["FRAMEWORK_SEARCH_PATHS[__platform_filter=\(sdk.platformFilterValue)]"] = "$(inherited) \(descriptionPackage.productsDirectory(buildConfiguration: baseBuildOptions.buildConfiguration, sdk: sdk).pathString)"
+        }
+
+        var extraFlags = baseBuildOptions.extraFlags ?? ExtraFlags()
+        extraFlags.linkerFlags = extraFlags.linkerFlags ?? []
+        dependencies.forEach { dependency in
+            switch dependency {
+            case let .product(product, _):
+                extraFlags.linkerFlags?.append("-framework \(product.name)")
+            case let .target(target, _):
+                extraFlags.linkerFlags?.append("-framework \(target.name)")
+            }
+        }
+
+        return .init(
+            buildConfiguration: baseBuildOptions.buildConfiguration,
+            isDebugSymbolsEmbedded: baseBuildOptions.isDebugSymbolsEmbedded,
+            frameworkType: baseBuildOptions.frameworkType,
+            sdks: Set(baseBuildOptions.sdks),
+            extraFlags: extraFlags,
+            extraBuildParameters: extraBuildParameters,
+            enableLibraryEvolution: baseBuildOptions.enableLibraryEvolution
+        )
     }
 
     func clean() async throws {

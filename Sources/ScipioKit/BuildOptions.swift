@@ -158,6 +158,31 @@ public enum SDK: String, Codable, Hashable {
             return "xrsimulator"
         }
     }
+
+    var platformFilterValue: String {
+        switch self {
+        case .macOS:
+            return "macos"
+        case .macCatalyst:
+            return "ios-maccatalyst"
+        case .iOS:
+            return "ios"
+        case .iOSSimulator:
+            return "ios-simulator"
+        case .tvOS:
+            return "tvos"
+        case .tvOSSimulator:
+            return "tvos-simulator"
+        case .watchOS:
+            return "watchos"
+        case .watchOSSimulator:
+            return "watchos-simulator"
+        case .visionOS:
+            return "visionos"
+        case .visionOSSimulator:
+            return "visionos-simulator"
+        }
+    }
 }
 
 extension ExtraFlags {
